@@ -37,10 +37,8 @@ async def predict(file: UploadFile = File(...)):
         "led": {"status": "Not Detected", "color": (128, 128, 128)},
     }
 
-    def detect(model, image, label_map, key):
-        resized = cv2.resize(image, (640, 640))
-        results = model.predict(resized, conf=0.25, iou=0.4, imgsz=640, verbose=False)
-
+    def detect(model, img, label_map, key):
+        results = model(img, conf=0.25)
         highest_conf = 0.0
         selected_class = None
         selected_box = None
@@ -67,15 +65,7 @@ async def predict(file: UploadFile = File(...)):
                 component_results[key]["color"] = (0, 0, 255)
 
             color = component_results[key]["color"]
-
-            # 🟩 Convert bbox back to original image size
-            h_ratio = image.shape[0] / 640
-            w_ratio = image.shape[1] / 640
-            x1 = int(selected_box[0] * w_ratio)
-            y1 = int(selected_box[1] * h_ratio)
-            x2 = int(selected_box[2] * w_ratio)
-            y2 = int(selected_box[3] * h_ratio)
-
+            x1, y1, x2, y2 = map(int, selected_box)
             cv2.rectangle(annotated_image, (x1, y1), (x2, y2), color, 2)
             label = f"{selected_class.capitalize()} {highest_conf:.2f}"
             (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
