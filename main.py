@@ -20,6 +20,8 @@ app.add_middleware(
 # ✅ Load models once
 battery_model = YOLO(os.path.join("models", "battery_cable.pt"))
 led_model = YOLO(os.path.join("models", "led_board_cable.pt"))
+display_model = YOLO(os.path.join("models", "display_cable.pt"))
+fan_model = YOLO(os.path.join("models", "fan_cable.pt"))
 
 @app.get("/")
 async def root():
@@ -32,9 +34,12 @@ async def predict(file: UploadFile = File(...)):
     image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     annotated_image = image.copy()
 
+    # ✅ Add all components here
     component_results = {
         "battery": {"status": "Not Detected", "color": (128, 128, 128)},
         "led": {"status": "Not Detected", "color": (128, 128, 128)},
+        "display": {"status": "Not Detected", "color": (128, 128, 128)},
+        "fan": {"status": "Not Detected", "color": (128, 128, 128)},
     }
 
     def detect(model, img, label_map, key):
@@ -70,16 +75,23 @@ async def predict(file: UploadFile = File(...)):
             label = f"{selected_class.capitalize()} {highest_conf:.2f}"
             (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
             cv2.rectangle(annotated_image, (x1, y1 - th - 6), (x1 + tw, y1), color, -1)
-            cv2.putText(annotated_image, label, (x1, y1 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(annotated_image, label, (x1, y1 - 4),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
+    # ✅ Run detection for all 4 models
     detect(battery_model, image, battery_model.names, "battery")
     detect(led_model, image, led_model.names, "led")
+    detect(display_model, image, display_model.names, "display")
+    detect(fan_model, image, fan_model.names, "fan")
 
+    # ✅ Encode image to base64
     _, buffer = cv2.imencode('.png', annotated_image)
     encoded_img = base64.b64encode(buffer).decode('utf-8')
 
     return JSONResponse(content={
         "image": encoded_img,
         "battery_status": component_results["battery"]["status"],
-        "led_status": component_results["led"]["status"]
+        "led_status": component_results["led"]["status"],
+        "display_status": component_results["display"]["status"],
+        "fan_status": component_results["fan"]["status"],
     })
