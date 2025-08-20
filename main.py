@@ -17,15 +17,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Load models once
+# ✅ Load all 8 models once
 battery_model = YOLO(os.path.join("models", "battery_cable.pt"))
 led_model = YOLO(os.path.join("models", "led_board_cable.pt"))
 display_model = YOLO(os.path.join("models", "display_cable.pt"))
 fan_model = YOLO(os.path.join("models", "fan_cable.pt"))
+coin_cell_model = YOLO(os.path.join("models", "coin_cell_cable.pt"))
+speaker_model = YOLO(os.path.join("models", "speaker_cable.pt"))
+touch_pad_model = YOLO(os.path.join("models", "touch_pad_cable.pt"))
+wlan_model = YOLO(os.path.join("models", "wlan_cable.pt"))
 
 @app.get("/")
 async def root():
-    return {"message": "✅ System Board Audit Backend is running"}
+    return {"message": "✅ System Board Audit Backend is running with 8 models"}
 
 @app.post("/predict/")
 async def predict(file: UploadFile = File(...)):
@@ -34,12 +38,16 @@ async def predict(file: UploadFile = File(...)):
     image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     annotated_image = image.copy()
 
-    # ✅ Add all components here
+    # ✅ Add all 8 components here
     component_results = {
         "battery": {"status": "Not Detected", "color": (128, 128, 128)},
         "led": {"status": "Not Detected", "color": (128, 128, 128)},
         "display": {"status": "Not Detected", "color": (128, 128, 128)},
         "fan": {"status": "Not Detected", "color": (128, 128, 128)},
+        "coin_cell": {"status": "Not Detected", "color": (128, 128, 128)},
+        "speaker": {"status": "Not Detected", "color": (128, 128, 128)},
+        "touch_pad": {"status": "Not Detected", "color": (128, 128, 128)},
+        "wlan": {"status": "Not Detected", "color": (128, 128, 128)},
     }
 
     def detect(model, img, label_map, key):
@@ -78,11 +86,15 @@ async def predict(file: UploadFile = File(...)):
             cv2.putText(annotated_image, label, (x1, y1 - 4),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
-    # ✅ Run detection for all 4 models
+    # ✅ Run detection for all 8 models
     detect(battery_model, image, battery_model.names, "battery")
     detect(led_model, image, led_model.names, "led")
     detect(display_model, image, display_model.names, "display")
     detect(fan_model, image, fan_model.names, "fan")
+    detect(coin_cell_model, image, coin_cell_model.names, "coin_cell")
+    detect(speaker_model, image, speaker_model.names, "speaker")
+    detect(touch_pad_model, image, touch_pad_model.names, "touch_pad")
+    detect(wlan_model, image, wlan_model.names, "wlan")
 
     # ✅ Encode image to base64
     _, buffer = cv2.imencode('.png', annotated_image)
@@ -94,4 +106,8 @@ async def predict(file: UploadFile = File(...)):
         "led_status": component_results["led"]["status"],
         "display_status": component_results["display"]["status"],
         "fan_status": component_results["fan"]["status"],
+        "coin_cell_status": component_results["coin_cell"]["status"],
+        "speaker_status": component_results["speaker"]["status"],
+        "touch_pad_status": component_results["touch_pad"]["status"],
+        "wlan_status": component_results["wlan"]["status"],
     })
